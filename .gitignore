@@ -10,3 +10,4 @@ web-build/
 *.ipa
 .env
 .env.local
+build/
