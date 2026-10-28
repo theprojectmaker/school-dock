@@ -10,12 +10,17 @@ import UIKit
 //    Guided Access, or the MDM's own Single App Mode all show up the same way.
 //  - managedConfig() returns the dictionary an MDM pushes under
 //    com.apple.configuration.managed (school name, admin PIN, apps, lock).
+//  - EdgeGuard keeps the first swipe up from the bottom edge inside the app.
 public final class SchoolLockModule: Module {
   private var observer: NSObjectProtocol?
 
   public func definition() -> ModuleDefinition {
     Name("SchoolLock")
     Events("onLockChange")
+
+    OnCreate {
+      DispatchQueue.main.async { EdgeGuard.install() }
+    }
 
     Function("status") { () -> Bool in
       return UIAccessibility.isGuidedAccessEnabled

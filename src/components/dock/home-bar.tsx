@@ -6,6 +6,7 @@ import { createContext, type ReactNode, useContext, useEffect, useRef, useState 
 import { Animated, PanResponder, View } from 'react-native';
 
 import { useLauncher } from './launcher';
+import { useSession } from './session';
 
 type Tone = 'light' | 'dark' | null;
 const ToneCtx = createContext<(t: Tone) => void>(() => {});
@@ -28,16 +29,26 @@ export function HomeBarHost({ fallback, children }: { fallback: 'light' | 'dark'
 
 function HomeBar({ light }: { light: boolean }) {
   const { goHome } = useLauncher();
+  const { guided, openGuided } = useSession();
   const lift = useRef(new Animated.Value(0)).current;
-  const home = useRef(goHome);
-  home.current = goHome;
+  const taps = useRef<number[]>([]);
+  // Swipe up = home (not during Guided Access). Three quick taps = Guided Access.
+  const actions = useRef({ home: goHome, guided: !!guided, triple: openGuided });
+  actions.current = { home: goHome, guided: !!guided, triple: openGuided };
+  const home = { current: () => { if (!actions.current.guided) actions.current.home(); } };
+  const tap = () => {
+    const now = Date.now();
+    taps.current = [...taps.current.filter((t) => now - t < 700), now];
+    if (taps.current.length >= 3) { taps.current = []; actions.current.triple(); }
+  };
   const pan = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: (_, g) => g.dy < -4,
     onPanResponderMove: (_, g) => lift.setValue(Math.max(-30, Math.min(0, g.dy * 0.5))),
     onPanResponderRelease: (_, g) => {
       Animated.spring(lift, { toValue: 0, useNativeDriver: true, speed: 30 }).start();
-      if (g.dy < -24 || g.vy < -0.4 || (Math.abs(g.dy) < 6 && Math.abs(g.dx) < 6)) home.current();
+      if (Math.abs(g.dy) < 6 && Math.abs(g.dx) < 6) tap();
+      else if (g.dy < -24 || g.vy < -0.4) home.current();
     },
     onPanResponderTerminate: () => Animated.spring(lift, { toValue: 0, useNativeDriver: true }).start(),
   })).current;
@@ -46,7 +57,7 @@ function HomeBar({ light }: { light: boolean }) {
     <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' }}>
       <Animated.View {...pan.panHandlers} accessible accessibilityRole="button" accessibilityLabel="Home"
         style={{ width: 240, height: 30, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 8, transform: [{ translateY: lift }] }}>
-        <View style={{ width: 150, height: 5, borderRadius: 3, backgroundColor: light ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.75)' }} />
+        <View style={{ width: 150, height: 5, borderRadius: 3, backgroundColor: light ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.75)', opacity: guided ? 0.3 : 1 }} />
       </Animated.View>
     </View>
   );

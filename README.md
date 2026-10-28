@@ -32,10 +32,24 @@ science tools, writing help and news. The admin can edit it or switch to
   wallpaper, the school's name and two small widgets. Swipe up to open. If a
   student passcode is set, the iOS keypad comes next. The lock screen shows at
   launch and every time the iPad wakes, on top of whatever app was open.
-- **Home screen** (`src/app/index.tsx`): widgets (Up Next, Due Soon, Recent
-  Notes), an icon grid and a frosted dock. Tapping an icon zooms the app open
-  from that icon. To go back, swipe up on (or tap) the home bar at the bottom
-  of every app, and the app shrinks back into its icon (`launcher.tsx`, `home-bar.tsx`).
+- **Home screen** (`src/app/index.tsx`, `src/lib/layout.tsx`): pages of apps and
+  widgets packed into an iPadOS grid, page dots, a dock with the App Library.
+  Touch and hold to edit: icons wiggle, drag them between pages and into or out
+  of the dock, remove them (they stay in the App Library), add widgets with +
+  (Clock, Calendar, Weather, Up Next, Due Soon, Recent Notes in small, medium
+  and large). Tapping an icon zooms the app open; swipe up on the home bar to
+  go back.
+- **Lock screen customizing**: touch and hold the clock to pick its font,
+  colour and up to four widgets. Due-soon assignments show as notifications.
+- **Settings app**: wallpaper, icon size and dark icons, lock screen, Guided
+  Access help, and School Admin (passcode).
+- **Guided Access, School Dock style**: triple-tap the home bar in any app,
+  enter the admin passcode, pick a time limit, Start. Students can't leave
+  that app until it ends.
+- **Website apps**: School Admin > Website Apps adds any site as an app with its
+  own icon, locked to that site.
+- **Bottom-edge swipes**: `modules/school-lock/ios/EdgeGuard.swift` defers the
+  bottom screen edge so iPadOS doesn't steal the home-bar swipe.
 - **Admin** (`src/components/dock/admin.tsx`): long-press the school name on
   the lock screen, or an empty spot on the home screen, for 1.5 seconds. Then
   enter the 6-digit admin passcode. From there you can set the school name,
@@ -99,6 +113,7 @@ setting on the iPad, and the admin screen shows it as "Set by your school".
 | `studentPasscode` | string (4 digits) | `""` for none |
 | `studentsEditSchedule` | boolean | `false` |
 | `autoLock` | boolean | `true` |
+| `studentsCustomize` | boolean | `true`. Students may change wallpaper, lock screen, home screen |
 | `searchAnySite` | boolean | `false`. Ray may open any site (SafeSearch stays strict) |
 | `allowedSites` | string (comma list) or array | `wikipedia.org,jstor.org,nysedregents.org` |
 

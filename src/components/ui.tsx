@@ -25,7 +25,7 @@ const FALLBACK: Record<string, keyof typeof Ionicons.glyphMap> = {
   'eraser': 'remove-circle-outline', 'exclamationmark.triangle.fill': 'warning', 'eyedropper': 'color-fill-outline', 'face.smiling': 'happy-outline',
   'folder': 'folder-outline', 'folder.badge.plus': 'folder-open-outline', 'function': 'analytics-outline', 'gearshape': 'settings-outline',
   'globe': 'globe-outline', 'graduationcap': 'school-outline', 'graduationcap.fill': 'school', 'grid': 'grid-outline',
-  'hand.draw': 'finger-print-outline', 'hand.raised': 'hand-left-outline', 'hand.raised.fill': 'hand-left', 'highlighter': 'color-wand-outline',
+  'hand.draw': 'finger-print-outline', 'hand.raised': 'hand-left-outline', 'hand.raised.fill': 'hand-left', 'info.circle.fill': 'information-circle', 'highlighter': 'color-wand-outline',
   'house': 'home-outline', 'house.fill': 'home', 'lasso': 'git-commit-outline', 'line.3.horizontal': 'reorder-three-outline', 'link': 'link-outline',
   'list.bullet': 'list', 'list.bullet.rectangle': 'list-outline', 'lock.fill': 'lock-closed', 'lock.open.fill': 'lock-open',
   'magnifyingglass': 'search', 'megaphone': 'megaphone-outline', 'mic': 'mic-outline', 'mic.fill': 'mic', 'minus': 'remove',
@@ -39,7 +39,7 @@ const FALLBACK: Record<string, keyof typeof Ionicons.glyphMap> = {
   'square.on.square': 'copy-outline', 'star': 'star-outline', 'star.fill': 'star', 'sunrise.fill': 'sunny-outline', 'text.viewfinder': 'scan',
   'textformat': 'text', 'thermometer.medium': 'thermometer-outline', 'trash': 'trash-outline', 'tray': 'file-tray-outline',
   'tray.full': 'file-tray-full-outline', 'umbrella.fill': 'umbrella', 'viewport': 'expand-outline', 'wand.and.rays': 'color-wand-outline',
-  'wind': 'leaf-outline', 'xmark': 'close', 'xmark.circle.fill': 'close-circle',
+  'wind': 'leaf-outline', 'xmark': 'close', 'xmark.circle.fill': 'close-circle', 'arrow.up.left.and.arrow.down.right': 'expand',
 };
 
 function Fallback({ name, size, color }: { name: string; size: number; color: string }) {

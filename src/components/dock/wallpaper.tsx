@@ -6,6 +6,7 @@ import { Image, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { useDock } from '@/lib/dock';
+import { useLayout } from '@/lib/layout';
 import { fsx } from '@/lib/fsx';
 import { contourPaths, wallpaperById } from '@/lib/wallpapers';
 
@@ -13,8 +14,11 @@ let paths: string[] | null = null;
 
 export function Wallpaper({ id, photo, dim = 0 }: { id?: string; photo?: string; dim?: number }) {
   const { cfg } = useDock();
-  const which = id ?? cfg.wallpaper;
-  const pic = which === 'photo' ? (photo ?? cfg.photo) : '';
+  const { prefs } = useLayout();
+  // The student's own wallpaper (when the school allows it), else the school's.
+  const which = id ?? prefs.wallpaper ?? cfg.wallpaper;
+  const ownPhoto = prefs.wallpaper ? prefs.photo : cfg.photo;
+  const pic = which === 'photo' ? (photo ?? ownPhoto) : '';
   const w = wallpaperById(which);
   const lines = useMemo(() => (w.lines ? (paths ??= contourPaths()) : null), [w.lines]);
   return (
@@ -43,5 +47,7 @@ export function Wallpaper({ id, photo, dim = 0 }: { id?: string; photo?: string;
 /** Whether white text reads well on the current wallpaper. */
 export function useWallpaperIsDark() {
   const { cfg } = useDock();
-  return cfg.wallpaper === 'photo' ? true : wallpaperById(cfg.wallpaper).dark;
+  const { prefs } = useLayout();
+  const which = prefs.wallpaper ?? cfg.wallpaper;
+  return which === 'photo' ? true : wallpaperById(which).dark;
 }

@@ -7,7 +7,7 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 
-import { APP_ORDER, APPS, type AppId } from './apps';
+import { ALWAYS_ON, APP_ORDER, APPS, type AppId, type WebApp } from './apps';
 import { managedConfig } from './lock';
 import { DEFAULT_SITES } from './sites';
 import { GREAT_NECK, type Place } from './weather';
@@ -27,6 +27,8 @@ export type DockConfig = {
   searchAnySite: boolean;             // Ray may open any site (SafeSearch still on)
   sites: string[];                    // sites Ray may open when searchAnySite is off
   place: Place;                       // where the Weather app and widgets forecast for
+  webApps: WebApp[];                  // websites the school added as apps
+  customize: boolean;                 // students may change wallpaper, lock screen and home screen
 };
 
 const DEFAULTS: DockConfig = {
@@ -34,6 +36,7 @@ const DEFAULTS: DockConfig = {
   apps: Object.fromEntries(APP_ORDER.map((id) => [id, APPS[id].on])) as Record<AppId, boolean>,
   widgets: true, editSchedule: true, passcode: '', autoLock: true,
   searchAnySite: false, sites: DEFAULT_SITES, place: GREAT_NECK,
+  webApps: [], customize: true,
 };
 
 const KEY = 'dock.config.v1';
@@ -58,6 +61,7 @@ function readManaged(): Managed {
   if (str('studentPasscode') != null) out.passcode = str('studentPasscode');
   if (bool('widgets') != null) out.widgets = bool('widgets');
   if (bool('studentsEditSchedule') != null) out.editSchedule = bool('studentsEditSchedule');
+  if (bool('studentsCustomize') != null) out.customize = bool('studentsCustomize');
   if (bool('autoLock') != null) out.autoLock = bool('autoLock');
   if (bool('searchAnySite') != null) out.searchAnySite = bool('searchAnySite');
   const sites = m.allowedSites;
@@ -138,4 +142,5 @@ export function useDock() {
   return c;
 }
 
-export const enabledApps = (cfg: DockConfig) => APP_ORDER.filter((id) => cfg.apps[id]);
+/** Every app the school allows on this iPad, built-in and website apps, plus Settings. */
+export const enabledApps = (cfg: DockConfig): string[] => [...APP_ORDER.filter((id) => cfg.apps[id]), ...cfg.webApps.map((w) => w.id), ...ALWAYS_ON];

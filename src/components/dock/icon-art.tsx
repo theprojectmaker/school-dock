@@ -3,7 +3,9 @@
 // home screen and in the launch zoom, on the iPad and in the web preview.
 import Svg, { Circle, G, Line, Path, Polygon, Rect, Text as SvgText } from 'react-native-svg';
 
-import type { AppId } from '@/lib/apps';
+import { Image, Text, View } from 'react-native';
+
+import type { AppId, DockApp } from '@/lib/apps';
 
 const shadow = 'rgba(0,0,0,0.18)';
 
@@ -149,14 +151,43 @@ function Weather() {
   );
 }
 
+/** The Settings gear: twelve teeth, a ring and a hub, in two greys like iOS. */
+function Settings() {
+  const teeth = 12, R = 36, r = 29;
+  let d = '';
+  for (let k = 0; k < teeth; k++) {
+    const a0 = (k / teeth) * Math.PI * 2, a1 = a0 + (Math.PI * 2) / teeth;
+    const p = (a: number, rad: number) => `${(50 + Math.cos(a) * rad).toFixed(2)} ${(50 + Math.sin(a) * rad).toFixed(2)}`;
+    const w = (Math.PI * 2) / teeth;
+    d += (k ? 'L' : 'M') + p(a0 + w * 0.12, r) + 'L' + p(a0 + w * 0.28, R) + 'L' + p(a0 + w * 0.62, R) + 'L' + p(a0 + w * 0.78, r) + 'L' + p(a1 + w * 0.12, r);
+  }
+  return (
+    <>
+      <Path d={d + 'Z'} fill="#3A3A3E" />
+      <Circle cx="50" cy="50" r="22" fill="#C7C7CC" />
+      <Circle cx="50" cy="50" r="15" fill="#3A3A3E" />
+      <Circle cx="50" cy="50" r="7" fill="#8E8E93" />
+    </>
+  );
+}
+
 const ART: Record<AppId, () => React.JSX.Element> = {
   quill: Quill, classroom: Classroom, desmos: Desmos, studento: Studento,
-  edpuzzle: Edpuzzle, khan: Khan, quizlet: Quizlet, kahoot: Kahoot, dictionary: Dictionary, weather: Weather, ray: Ray,
+  edpuzzle: Edpuzzle, khan: Khan, quizlet: Quizlet, kahoot: Kahoot, dictionary: Dictionary, weather: Weather, ray: Ray, settings: Settings,
 };
 
-/** The app's artwork on a transparent background, `size` points square. */
-export function IconGlyph({ id, size }: { id: AppId; size: number }) {
-  const Art = ART[id];
+/** The app's artwork on a transparent background, `size` points square. Website apps show the site's own icon. */
+export function IconGlyph({ app, size }: { app: DockApp; size: number }) {
+  const Art = ART[app.id as AppId];
+  if (!Art) {
+    const host = app.web?.hosts[0] ?? '';
+    return (
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ position: 'absolute', color: '#fff', fontSize: size * 0.42, fontWeight: '700' }}>{app.name.slice(0, 1).toUpperCase()}</Text>
+        {host ? <Image source={{ uri: `https://icons.duckduckgo.com/ip3/${host}.ico` }} style={{ width: size * 0.5, height: size * 0.5, borderRadius: size * 0.1 }} /> : null}
+      </View>
+    );
+  }
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100">
       <Art />

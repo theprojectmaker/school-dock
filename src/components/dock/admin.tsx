@@ -63,6 +63,21 @@ export function AdminScreen({ visible, onClose, onEditSchedule }: { visible: boo
   const [lockMsg, setLockMsg] = useState<string | null>(null);
   const [school, setSchool] = useState(cfg.school);
   const [site, setSite] = useState('');
+  const [webName, setWebName] = useState('');
+  const [webUrl, setWebUrl] = useState('');
+  const [webErr, setWebErr] = useState('');
+  const addWebApp = () => {
+    let u = webUrl.trim();
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    let host = '';
+    try { host = new URL(u).hostname.replace(/^www\./, ''); } catch {}
+    if (!host || !host.includes('.')) { setWebErr("That doesn't look like a web address."); return; }
+    const name = webName.trim() || host.split('.')[0].replace(/^./, (c) => c.toUpperCase());
+    const palette = ['#2F6BFF', '#14A06A', '#E2504A', '#8B5CF6', '#F59E0B', '#0EA5E9', '#DB2777', '#475569'];
+    const color = palette[([...host].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7) >>> 0) % palette.length];
+    set({ webApps: [...cfg.webApps, { id: 'w_' + Date.now().toString(36), name, url: u, color }] });
+    setWebName(''); setWebUrl(''); setWebErr('');
+  };
   const [town, setTown] = useState(cfg.place.name);
   const saveTown = async () => {
     const n = town.trim();
@@ -189,8 +204,22 @@ export function AdminScreen({ visible, onClose, onEditSchedule }: { visible: boo
           ))}
         </Section>
 
+        <Section title="Website Apps" footer={webErr || 'Any website as an app on the home screen, with its own icon. It opens in the locked browser and can only go to its own site and Google, Microsoft or Clever sign-in.'}>
+          {cfg.webApps.map((w) => (
+            <Row key={w.id} label={w.name} sub={w.url}
+              right={<Pressable onPress={() => set({ webApps: cfg.webApps.filter((x) => x.id !== w.id) })} hitSlop={8}><Icon name="minus.circle.fill" size={20} color={C.red} /></Pressable>} />
+          ))}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 8 }}>
+            <TextInput value={webName} onChangeText={setWebName} placeholder="Name" placeholderTextColor="#C7C7CC" style={{ width: 140, fontSize: 17, color: C.text, paddingVertical: 8 }} />
+            <TextInput value={webUrl} onChangeText={(t) => { setWebUrl(t); setWebErr(''); }} onSubmitEditing={addWebApp} placeholder="website.com" placeholderTextColor="#C7C7CC"
+              autoCapitalize="none" autoCorrect={false} keyboardType="url" style={{ flex: 1, fontSize: 17, color: C.text, paddingVertical: 8 }} />
+            <Pressable onPress={addWebApp} hitSlop={8}><Text style={{ color: C.blue, fontSize: 17, fontWeight: '600' }}>Add</Text></Pressable>
+          </View>
+        </Section>
+
         <Section title="Home Screen">
-          <Row label="Widgets" sub="Up Next, Due Soon and Recent Notes" right={is('widgets') ? <Managed /> : <Switch trackColor={{ false: '#E9E9EB', true: '#34C759' }} ios_backgroundColor="#E9E9EB" value={cfg.widgets} onValueChange={(v) => set({ widgets: v })} />} />
+          <Row label="Students can customize" sub="Wallpaper, lock screen and arranging the home screen" right={is('customize') ? <Managed /> : <Switch trackColor={{ false: '#E9E9EB', true: '#34C759' }} ios_backgroundColor="#E9E9EB" value={cfg.customize} onValueChange={(v) => set({ customize: v })} />} />
+          <Row label="Widgets" sub="Clock, Calendar, Weather, Up Next, Due Soon, Recent Notes" right={is('widgets') ? <Managed /> : <Switch trackColor={{ false: '#E9E9EB', true: '#34C759' }} ios_backgroundColor="#E9E9EB" value={cfg.widgets} onValueChange={(v) => set({ widgets: v })} />} />
           <Row label="Students can edit the bell schedule" right={is('editSchedule') ? <Managed /> : <Switch trackColor={{ false: '#E9E9EB', true: '#34C759' }} ios_backgroundColor="#E9E9EB" value={cfg.editSchedule} onValueChange={(v) => set({ editSchedule: v })} />} />
           <Row label="Edit Bell Schedule…" onPress={onEditSchedule} last />
         </Section>

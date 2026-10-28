@@ -10,7 +10,8 @@ import { WebView } from 'react-native-webview';
 
 import { AppIconArt } from '@/components/dock/app-icon';
 import { Icon, IconButton, useToast } from '@/components/ui';
-import { type AppId, APPS, hostAllowed, SIGN_IN_HOSTS } from '@/lib/apps';
+import { appById, hostAllowed, SIGN_IN_HOSTS } from '@/lib/apps';
+import { useDock } from '@/lib/dock';
 import { useTheme } from '@/lib/settings';
 
 // Google refuses to sign in inside an app's web view unless it looks like Safari.
@@ -18,7 +19,8 @@ const SAFARI = 'Version/17.0 Mobile/15E148 Safari/604.1';
 
 export default function WebAppScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const app = APPS[id as AppId];
+  const { cfg } = useDock();
+  const app = appById(id, cfg.webApps);
   const t = useTheme();
   const ins = useSafeAreaInsets();
   const { toast } = useToast();

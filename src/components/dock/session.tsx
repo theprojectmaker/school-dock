@@ -7,12 +7,14 @@ import { AppState, StyleSheet, View } from 'react-native';
 import { useDock } from '@/lib/dock';
 import { isLocked, requestLock } from '@/lib/lock';
 import { AdminScreen } from './admin';
+import { type Guided, GuidedSheet, loadGuided, saveGuided } from './guided';
+import { appById } from '@/lib/apps';
 import { useLauncher } from './launcher';
 import { LockScreen } from './lock-screen';
 import { Setup } from './setup';
 
-type Ctx = { openAdmin: () => void; lockNow: () => void };
-const SessionCtx = createContext<Ctx>({ openAdmin: () => {}, lockNow: () => {} });
+type Ctx = { openAdmin: () => void; lockNow: () => void; guided: Guided | null; openGuided: () => void };
+const SessionCtx = createContext<Ctx>({ openAdmin: () => {}, lockNow: () => {}, guided: null, openGuided: () => {} });
 export const useSession = () => useContext(SessionCtx);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -22,13 +24,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [wake, setWake] = useState(0);
   const [admin, setAdmin] = useState(false);
   const asked = useRef(false);
+  const [guided, setGuided] = useState<Guided | null>(null);
+  const [guidedSheet, setGuidedSheet] = useState(false);
 
-  // Lock again whenever the iPad comes back from sleep or the background.
+  // A Guided Access session survives a relaunch until its time is up.
+  useEffect(() => { loadGuided().then((g) => { if (g) setGuided(g); }); }, []);
   useEffect(() => {
-    let last = AppState.currentState;
+    if (!guided?.until) return;
+    const t = setInterval(() => {
+      if (Date.now() >= guided.until!) { setGuided(null); saveGuided(null); setLocked(true); setWake((n) => n + 1); }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [guided]);
+
+  // Lock again when the iPad comes back after sleeping or being away for a while.
+  // A quick trip out (a share sheet, a stray swipe) shouldn't land on the lock screen.
+  useEffect(() => {
+    let away = 0;
     const sub = AppState.addEventListener('change', (s) => {
-      if (last === 'background' && s === 'active') { setLocked(true); setWake((n) => n + 1); }
-      last = s;
+      if (s === 'background') away = Date.now();
+      else if (s === 'active' && away) {
+        if (Date.now() - away > 60_000) { setLocked(true); setWake((n) => n + 1); }
+        away = 0;
+      }
     });
     return () => sub.remove();
   }, []);
@@ -43,7 +61,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(() => ({
     openAdmin: () => setAdmin(true),
     lockNow: () => { setLocked(true); setWake((n) => n + 1); },
-  }), []);
+    guided,
+    openGuided: () => setGuidedSheet(true),
+  }), [guided]);
+  const openApp = guided?.app ?? launcher.current;
+
+  // During Guided Access the guided app is the only place to be (also after unlocking).
+  useEffect(() => {
+    if (guided && !locked && cfg.setup && launcher.current !== guided.app) {
+      const t = setTimeout(() => launcher.launch(guided.app, 'guided'), 300);
+      return () => clearTimeout(t);
+    }
+  }, [guided, locked, cfg.setup, launcher]);
 
   const editSchedule = useCallback(() => {
     setAdmin(false);
@@ -61,6 +90,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         <LockScreen wakeKey={wake} onUnlock={() => setLocked(false)} onAdmin={() => setAdmin(true)} />
       ) : null}
       <AdminScreen visible={admin} onClose={() => setAdmin(false)} onEditSchedule={editSchedule} />
+      <GuidedSheet visible={guidedSheet} app={openApp ? appById(openApp, cfg.webApps) : null} active={guided}
+        onClose={() => setGuidedSheet(false)}
+        onStart={(min) => {
+          if (!openApp) { setGuidedSheet(false); return; }
+          const g: Guided = { app: openApp, until: min ? Date.now() + min * 60_000 : null, started: Date.now() };
+          setGuided(g); saveGuided(g); setGuidedSheet(false);
+        }}
+        onEnd={() => { setGuided(null); saveGuided(null); setGuidedSheet(false); }} />
     </SessionCtx.Provider>
   );
 }

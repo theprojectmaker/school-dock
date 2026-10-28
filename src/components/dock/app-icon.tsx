@@ -8,14 +8,16 @@ import { IconGlyph } from './icon-art';
 
 export const iconRadius = (size: number) => size * 0.225;
 
-export function AppIconArt({ app, size }: { app: DockApp; size: number }) {
+/** `dark` is the iOS 18 dark icon look: the art on near-black instead of its colour. */
+export function AppIconArt({ app, size, dark }: { app: DockApp; size: number; dark?: boolean }) {
   const r = iconRadius(size);
+  const fill: [string, string] = dark ? ['#2C2C2E', '#141416'] : [app.top, app.bottom];
   return (
     <View style={{ width: size, height: size, borderRadius: r, overflow: 'hidden', borderCurve: 'continuous' } as any}>
-      <LinearGradient colors={[app.top, app.bottom]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={fill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={StyleSheet.absoluteFill} />
       <LinearGradient colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 0.55 }} style={StyleSheet.absoluteFill} />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <IconGlyph id={app.id} size={size} />
+        <IconGlyph app={app} size={size} />
       </View>
     </View>
   );

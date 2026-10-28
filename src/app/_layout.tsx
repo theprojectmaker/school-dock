@@ -3,12 +3,14 @@
 // The home screen is `/`; every mini app lives in the (apps) group.
 import { Stack } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { LauncherProvider } from '@/components/dock/launcher';
 import { SessionProvider } from '@/components/dock/session';
 import { ToastProvider } from '@/components/ui';
 import { DockProvider } from '@/lib/dock';
+import { LayoutProvider } from '@/lib/layout';
 import { LibraryProvider } from '@/lib/library';
 import { EngineHost } from '@/lib/pdf-engine';
 import { SettingsProvider } from '@/lib/settings';
@@ -28,10 +30,12 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
 
 export default function RootLayout() {
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <SettingsProvider>
         <LibraryProvider>
           <DockProvider>
+            <LayoutProvider>
             <ToastProvider>
               <View style={{ flex: 1, backgroundColor: '#000' }}>
                 <LauncherProvider>
@@ -43,9 +47,11 @@ export default function RootLayout() {
                 <EngineHost />
               </View>
             </ToastProvider>
+            </LayoutProvider>
           </DockProvider>
         </LibraryProvider>
       </SettingsProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

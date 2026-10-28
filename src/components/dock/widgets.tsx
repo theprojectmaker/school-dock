@@ -2,7 +2,8 @@
 // lock screen widgets. They read what the mini apps already saved on the
 // iPad: the bell schedule, the last Classroom refresh and the notes library.
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, Text, useColorScheme, View, type ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Image, Pressable, StyleSheet, Text, useColorScheme, View, type ViewStyle } from 'react-native';
 
 import { Icon } from '@/components/ui';
 import { type Assignment, cached, courseColor, dueLabel } from '@/lib/classroom';
@@ -11,7 +12,8 @@ import { useLibrary } from '@/lib/library';
 import { notePath } from '@/lib/noteio';
 import { useDock } from '@/lib/dock';
 import { fmtTime, loadSchedule, type Schedule, whereNow } from '@/lib/schedule';
-import { type Forecast, getForecast } from '@/lib/weather';
+import { condition, type Forecast, getForecast } from '@/lib/weather';
+import type { LockWidget } from '@/lib/layout';
 
 export type HomeData = { schedule: Schedule; due: Assignment[] | null; now: Date; weather: Forecast | null };
 
@@ -37,12 +39,12 @@ export function useHomeData(key: unknown): HomeData {
   return { schedule, due, now, weather: place ? weather : null };
 }
 
-const mmss = (s: number) => {
+export const mmss = (s: number) => {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
   return h ? `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`;
 };
 
-function useWidgetColors() {
+export function useWidgetColors() {
   const dark = useColorScheme() === 'dark';
   return dark
     ? { bg: '#1C1C1E', text: '#FFFFFF', sub: 'rgba(235,235,245,0.6)', line: 'rgba(84,84,88,0.6)', track: '#3A3A3C', dark }
@@ -50,23 +52,24 @@ function useWidgetColors() {
 }
 
 /** The widget card: continuous corners, opaque like iPadOS widgets, pressable. */
-function Card({ w, h, onPress, children, refKey, register }: {
-  w: number; h: number; onPress: () => void; children: React.ReactNode; refKey: string;
-  register?: (key: string, v: any) => void;
+export function Card({ w, h, onPress, onLongPress, children, refKey, register, bg, pad = 16 }: {
+  w: number; h: number; onPress: () => void; onLongPress?: () => void; children: React.ReactNode; refKey: string;
+  register?: (key: string, v: any) => void; bg?: [string, string]; pad?: number;
 }) {
   const c = useWidgetColors();
   return (
-    <Pressable ref={(v) => register?.(refKey, v)} onPress={onPress}
+    <Pressable ref={(v) => register?.(refKey, v)} onPress={onPress} onLongPress={onLongPress} delayLongPress={450}
       style={({ pressed }) => ({ width: w, height: h, transform: [{ scale: pressed ? 0.97 : 1 }],
         shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } } as ViewStyle)}>
-      <View style={{ flex: 1, borderRadius: 22, borderCurve: 'continuous', backgroundColor: c.bg, overflow: 'hidden', padding: 16 } as ViewStyle}>
+      <View style={{ flex: 1, borderRadius: 22, borderCurve: 'continuous', backgroundColor: c.bg, overflow: 'hidden', padding: pad } as ViewStyle}>
+        {bg ? <LinearGradient colors={bg} style={StyleSheet.absoluteFill} /> : null}
         {children}
       </View>
     </Pressable>
   );
 }
 
-function Header({ icon, label, color }: { icon: string; label: string; color: string }) {
+export function Header({ icon, label, color }: { icon: string; label: string; color: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
       <Icon name={icon} size={13} color={color} />
@@ -75,15 +78,15 @@ function Header({ icon, label, color }: { icon: string; label: string; color: st
   );
 }
 
-type WidgetProps = { w: number; h: number; data: HomeData; onPress: () => void; register: (key: string, v: any) => void };
+export type WidgetProps = { w: number; h: number; data: HomeData; onPress: () => void; onLongPress?: () => void; register: (key: string, v: any) => void; refKey?: string };
 
-export function UpNextWidget({ w, h, data, onPress, register }: WidgetProps) {
+export function UpNextWidget({ w, h, data, onPress, onLongPress, register, refKey = 'widget:studento' }: WidgetProps) {
   const c = useWidgetColors();
   const at = whereNow(data.schedule, data.now);
   const orange = '#FF8A1F';
   const day = data.now.toLocaleDateString([], { weekday: 'long' });
   return (
-    <Card w={w} h={h} onPress={onPress} refKey="widget:studento" register={register}>
+    <Card w={w} h={h} onPress={onPress} onLongPress={onLongPress} refKey={refKey} register={register}>
       <Header icon="bell.fill" label={at.kind === 'class' ? 'IN CLASS' : at.kind === 'passing' ? 'UP NEXT' : day.toUpperCase()} color={orange} />
       {at.kind === 'class' ? (
         <View style={{ flex: 1, justifyContent: 'space-between' }}>
@@ -122,13 +125,13 @@ export function UpNextWidget({ w, h, data, onPress, register }: WidgetProps) {
   );
 }
 
-export function DueSoonWidget({ w, h, data, onPress, register }: WidgetProps) {
+export function DueSoonWidget({ w, h, data, onPress, onLongPress, register, refKey = 'widget:classroom' }: WidgetProps) {
   const c = useWidgetColors();
   const green = '#1FA855';
   const rows = Math.max(1, Math.floor((h - 52) / 40));
   const list = (data.due ?? []).slice(0, rows);
   return (
-    <Card w={w} h={h} onPress={onPress} refKey="widget:classroom" register={register}>
+    <Card w={w} h={h} onPress={onPress} onLongPress={onLongPress} refKey={refKey} register={register}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Header icon="graduationcap.fill" label="DUE SOON" color={green} />
         {data.due?.length ? <Text style={{ color: c.sub, fontSize: 12.5, fontWeight: '600' }}>{data.due.length} to do</Text> : null}
@@ -160,14 +163,14 @@ export function DueSoonWidget({ w, h, data, onPress, register }: WidgetProps) {
   );
 }
 
-export function NotesWidget({ w, h, onPress, register }: Omit<WidgetProps, 'data'>) {
+export function NotesWidget({ w, h, onPress, onLongPress, register, refKey = 'widget:quill' }: Omit<WidgetProps, 'data'>) {
   const c = useWidgetColors();
   const lib = useLibrary();
   const recent = lib.lib.notes.slice().sort((a, b) => b.updated - a.updated).slice(0, 3);
   const tileH = h - 62;
   const tileW = Math.min(tileH * 0.78, (w - 32 - 24) / 3);
   return (
-    <Card w={w} h={h} onPress={onPress} refKey="widget:quill" register={register}>
+    <Card w={w} h={h} onPress={onPress} onLongPress={onLongPress} refKey={refKey} register={register}>
       <Header icon="pencil.and.scribble" label="RECENT NOTES" color="#2F6BFF" />
       {recent.length ? (
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
@@ -190,26 +193,40 @@ export function NotesWidget({ w, h, onPress, register }: Omit<WidgetProps, 'data
   );
 }
 
-/** Lock screen widgets: monochrome, translucent, under the clock. */
-export function LockWidgets({ data, showClass, showDue }: { data: HomeData; showClass: boolean; showDue: boolean }) {
+/** Lock screen widgets: monochrome, translucent, under the clock, in the order the student picked. */
+export function LockWidgets({ data, kinds, color = '#FFFFFF' }: { data: HomeData; kinds: LockWidget[]; color?: string }) {
+  const lib = useLibrary();
   const at = whereNow(data.schedule, data.now);
-  const items: { icon: string; top: string; main: string }[] = [];
-  if (showClass && at.kind === 'class') items.push({ icon: 'bell.fill', top: at.period.name, main: `${Math.ceil(at.left / 60)} min left` });
-  else if (showClass && at.kind === 'passing') items.push({ icon: 'bell.fill', top: `${at.next.name} at ${fmtTime(at.next.start)}`, main: `in ${Math.ceil(at.left / 60)} min` });
-  if (showDue && data.due) {
-    const soon = data.due.filter((a) => a.due != null && a.due < Date.now() + 2 * 864e5);
-    items.push({ icon: 'graduationcap.fill', top: 'Classroom', main: data.due.length ? `${data.due.length} to do${soon.length ? `, ${soon.length} due soon` : ''}` : 'All caught up' });
+  const items: { key: string; icon: string; top: string; main: string }[] = [];
+  for (const k of kinds) {
+    if (k === 'weather' && data.weather) {
+      const c = condition(data.weather.now.code, data.weather.now.day);
+      const d = data.weather.days[0];
+      items.push({ key: k, icon: c.icon, top: data.weather.place, main: `${data.weather.now.temp}° ${d ? `H:${d.hi}° L:${d.lo}°` : c.text}` });
+    } else if (k === 'class') {
+      if (at.kind === 'class') items.push({ key: k, icon: 'bell.fill', top: at.period.name, main: `${Math.ceil(at.left / 60)} min left` });
+      else if (at.kind === 'passing') items.push({ key: k, icon: 'bell.fill', top: `${at.next.name} at ${fmtTime(at.next.start)}`, main: `in ${Math.ceil(at.left / 60)} min` });
+      else items.push({ key: k, icon: 'bell.fill', top: 'Studento', main: data.schedule.periods.length ? 'No class now' : 'No schedule' });
+    } else if (k === 'due' && data.due) {
+      const soon = data.due.filter((a) => a.due != null && a.due < Date.now() + 2 * 864e5);
+      items.push({ key: k, icon: 'graduationcap.fill', top: 'Classroom', main: data.due.length ? `${data.due.length} to do${soon.length ? `, ${soon.length} soon` : ''}` : 'All caught up' });
+    } else if (k === 'date') {
+      items.push({ key: k, icon: 'calendar', top: data.now.toLocaleDateString([], { weekday: 'long' }), main: data.now.toLocaleDateString([], { month: 'short', day: 'numeric' }) });
+    } else if (k === 'notes') {
+      const n = lib.lib.notes.slice().sort((a, b) => b.updated - a.updated)[0];
+      items.push({ key: k, icon: 'pencil.and.scribble', top: 'Quill', main: n ? n.title : 'No notes yet' });
+    }
   }
   if (!items.length) return null;
   return (
-    <View style={{ flexDirection: 'row', gap: 14, justifyContent: 'center' }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
       {items.map((it) => (
-        <View key={it.icon} style={{ minWidth: 170, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.16)' }}>
+        <View key={it.key} style={{ minWidth: 160, maxWidth: 230, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.16)' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Icon name={it.icon} size={12} color="rgba(255,255,255,0.85)" />
-            <Text numberOfLines={1} style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600' }}>{it.top}</Text>
+            <Icon name={it.icon} size={12} color={color} />
+            <Text numberOfLines={1} style={{ color, opacity: 0.85, fontSize: 13, fontWeight: '600' }}>{it.top}</Text>
           </View>
-          <Text numberOfLines={1} style={{ color: '#fff', fontSize: 16, fontWeight: '700', marginTop: 2 }}>{it.main}</Text>
+          <Text numberOfLines={1} style={{ color, fontSize: 16, fontWeight: '700', marginTop: 2 }}>{it.main}</Text>
         </View>
       ))}
     </View>

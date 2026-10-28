@@ -3,10 +3,10 @@
 export type AppId =
   | 'quill' | 'classroom' | 'desmos' | 'studento'
   | 'edpuzzle' | 'khan' | 'quizlet' | 'kahoot'
-  | 'dictionary' | 'weather' | 'ray';
+  | 'dictionary' | 'weather' | 'ray' | 'settings';
 
 export type DockApp = {
-  id: AppId;
+  id: string;          // a built-in AppId, or 'w_…' for a website the school added
   name: string;
   route: string;
   top: string; bottom: string; // icon background gradient
@@ -40,9 +40,38 @@ export const APPS: Record<AppId, DockApp> = {
   dictionary: { id: 'dictionary', name: 'Dictionary', route: '/dictionary', top: '#E2504A', bottom: '#9B1C24', splash: '#F6F5F2', on: true },
   weather: { id: 'weather', name: 'Weather', route: '/weather', top: '#5AA9F0', bottom: '#1F5FB8', splash: '#2C6BC0', on: true },
   ray: { id: 'ray', name: 'Ray', route: '/ray', top: '#FFF6E6', bottom: '#F3E2C0', splash: '#F6EDD9', on: true },
+  settings: { id: 'settings', name: 'Settings', route: '/settings', top: '#A2A2A8', bottom: '#6D6D73', splash: '#F2F2F7', dock: true, on: true },
 };
 
 export const APP_ORDER: AppId[] = ['quill', 'classroom', 'desmos', 'studento', 'edpuzzle', 'khan', 'quizlet', 'kahoot', 'dictionary', 'weather', 'ray'];
+
+/** Apps the admin can't hide (Settings holds the student's own options and the admin entry). */
+export const ALWAYS_ON = ['settings'];
+
+/** A website the school added as an app: opens in the locked browser, only on its own site. */
+export type WebApp = { id: string; name: string; url: string; color: string };
+
+const shade = (hex: string, k: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  const c = (s: number) => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * k)));
+  return `#${((c(16) << 16) | (c(8) << 8) | c(0)).toString(16).padStart(6, '0')}`;
+};
+
+export function webDockApp(w: WebApp): DockApp {
+  let host = '';
+  try { host = new URL(w.url).hostname.replace(/^www./, ''); } catch {}
+  return {
+    id: w.id, name: w.name, route: `/web/${w.id}`, top: shade(w.color, 1.15), bottom: shade(w.color, 0.8), splash: '#FFFFFF', on: true,
+    web: { url: w.url, hosts: host ? [host] : [], blurb: host },
+  };
+}
+
+/** Any app by id: a built-in one or a website app from the school's list. */
+export function appById(id: string, webApps: WebApp[] = []): DockApp | null {
+  if (id in APPS) return APPS[id as AppId];
+  const w = webApps.find((x) => x.id === id);
+  return w ? webDockApp(w) : null;
+}
 
 /** Sign-in pages the web apps need (Google, Microsoft, Clever, Apple). */
 export const SIGN_IN_HOSTS = [
